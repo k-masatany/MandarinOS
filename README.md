@@ -9,3 +9,6 @@
 3. sudo apt-get -y upgrade
 4. sudo apt-get -y install nasm exfat-utils grub-common xorriso
 
+## 参考リンク
+
+https://os.phil-opp.com/multiboot-kernel/

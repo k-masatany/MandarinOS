@@ -1,34 +1,31 @@
 TARGET = mandarinos.elf
+BOOTLOADER_DIR = ./src/bootloader/
+BINARY_DIR = ./bin/isofiles/boot/
+BOOT_OBJ = multiboot_header.o boot.o
 
-CC = gcc
-LN_S = ln -s
-RANLIB = ranlib
-INCLUDES = -I./src/include
-FLAGS = -m32 -ffreestanding -fno-common -fno-builtin -fomit-frame-pointer -O2 -c
-LD = ld  -melf_i386  -Ttext=0x100000 --oformat elf32-i386 -o
+all:	iso
 
-.S.o:
-		${CC} ${INCLUDES} ${FLAGS} $<
-.c.o:
-		${CC} ${INCLUDES} ${FLAGS} $<
+# ブートローダ
+multiboot_header.o:
+	nasm -f elf64 ${BOOTLOADER_DIR}multiboot_header.asm
 
-BOOT_S = ./src/bootloader/load.S
-BOOT_C = ./src/bootloader/boot.c
+boot.o:
+	nasm -f elf64 ${BOOTLOADER_DIR}boot.asm
 
-BOOT_OBJ=${BOOT_S:.S=.o} ${BOOT_C:.c=.o}
+# カーネルビルド
+kernel: ${BOOT_OBJ}
+	ld -n -o ${BINARY_DIR}${TARGET} -T ${BOOTLOADER_DIR}linker.ld ${BOOTLOADER_DIR}multiboot_header.o ${BOOTLOADER_DIR}boot.o
 
-all:	mandarinos
+# ディスクイメージ作成
+iso: kernel
+	grub-mkrescue -o ./bin/mandarin_os.iso bin/isofiles/
 
-mandarinos:   ${BOOT_OBJ}
-		${LD} bin/isofiles/boot/${TARGET} ${BOOT_OBJ}
-		grub-mkrescue -o ./bin/mandarin_os.iso bin/isofiles/
-
-${BOOT_OBJ}:	${BOOT_SRC}
-
+# 不要ファイルの削除
 .PHONY:	clean
 clean:
 	-${RM}  -f *~ *.lo *.o
 
+# エミュレータ実行
 .PHONY:	run
 run:
 	qemu-system-x86_64 -m 512 -boot order=d -cdrom ./bin/mandarin_os.iso
